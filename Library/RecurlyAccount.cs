@@ -21,8 +21,6 @@ namespace Recurly
         public string LastName { get; set; }
         public string CompanyName { get; set; }
         public RecurlyBillingInfo BillingInfo { get; set; }
-        public string AcceptLanguage { get; set; }
-        public string HostedLoginToken { get; private set; }
 
         internal const string UrlPrefix = "/accounts/";
 
@@ -97,25 +95,6 @@ namespace Recurly
             RecurlyClient.PerformRequest(RecurlyClient.HttpRequestMethod.Delete, UrlPrefix + System.Web.HttpUtility.UrlEncode(accountCode));
         }
 
-        /// <summary>
-        /// Lookup the active coupon for this account.
-        /// </summary>
-        /// <returns></returns>
-        public RecurlyAccountCoupon GetActiveCoupon()
-        {
-            return RecurlyAccountCoupon.Get(this.AccountCode);
-        }
-
-        /// <summary>
-        /// Redeem a coupon on the account.
-        /// </summary>
-        /// <param name="couponCode"></param>
-        /// <returns></returns>
-        public RecurlyAccountCoupon RedeemCoupon(string couponCode)
-        {
-            return RecurlyAccountCoupon.Redeem(this.AccountCode, couponCode);
-        }
-
         #region Read and Write XML documents
 
         internal void ReadXml(XmlTextReader reader)
@@ -153,14 +132,6 @@ namespace Recurly
                         case "company_name":
                             this.CompanyName = reader.ReadElementContentAsString();
                             break;
-
-                        case "accept_language":
-                            this.AcceptLanguage = reader.ReadElementContentAsString();
-                            break;
-
-                        case "hosted_login_token":
-                            this.HostedLoginToken = reader.ReadElementContentAsString();
-                            break;
                     }
                 }
             }
@@ -176,7 +147,6 @@ namespace Recurly
             xmlWriter.WriteElementString("first_name", this.FirstName);
             xmlWriter.WriteElementString("last_name", this.LastName);
             xmlWriter.WriteElementString("company_name", this.CompanyName);
-            xmlWriter.WriteElementString("accept_language", this.AcceptLanguage);
 
             if (this.BillingInfo != null)
                 this.BillingInfo.WriteXml(xmlWriter);

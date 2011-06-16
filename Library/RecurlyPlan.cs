@@ -15,6 +15,7 @@ namespace Recurly
         public int PlanIntervalLength { get; private set; }
         public int TrialIntervalLength { get; private set; }
         public IntervalUnit PlanIntervalUnit { get; private set; }
+        public IntervalUnit TrialIntervalUnit { get; private set; }
 
         public enum IntervalUnit
         {
@@ -23,7 +24,29 @@ namespace Recurly
         }
 
         private const string UrlPrefix = "/company/plans/";
+        public static IEnumerable<RecurlyPlan> GetAll()
+        {
+            var plans = new List<RecurlyPlan>();
+            HttpStatusCode statusCode = RecurlyClient.PerformRequest(RecurlyClient.HttpRequestMethod.Get, UrlPrefix, (XmlTextReader reader) =>
+            {
+                while (reader.Read())
+                {
+                    // End of account element, get out of here
+                    if (reader.Name == "plans" && reader.NodeType == XmlNodeType.EndElement)
+                        break;
 
+                    if (reader.NodeType == XmlNodeType.Element && reader.Name == "plan")
+                    {
+                        var plan = new RecurlyPlan();
+                        plan.ReadXml(reader);
+                        plans.Add(plan);
+                    }
+                }
+
+            });
+
+            return plans;
+        }
         public static RecurlyPlan Get(string planCode)
         {
             RecurlyPlan plan = new RecurlyPlan();
@@ -82,6 +105,10 @@ namespace Recurly
 
                         case "trial_interval_length":
                             this.TrialIntervalLength = reader.ReadElementContentAsInt();
+                            break;
+                        case "trial_interval_unit":
+                            string trialUnit = reader.ReadElementContentAsString();
+                            this.TrialIntervalUnit = (trialUnit == "days" ? IntervalUnit.Days : IntervalUnit.Months);
                             break;
                     }
                 }

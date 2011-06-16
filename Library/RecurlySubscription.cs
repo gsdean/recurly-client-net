@@ -15,7 +15,6 @@ namespace Recurly
         public RecurlyAccount Account { get; private set; }
         public int? Quantity { get; set; }
         public string PlanCode { get; set; }
-        public string CouponCode { get; set; }
 
         // Additional information
         /// <summary>
@@ -42,28 +41,10 @@ namespace Recurly
         /// Date the trial started, if the subscription has a trial.
         /// </summary>
         public DateTime? TrialPeriodStartedAt { get; private set; }
-
         /// <summary>
         /// Date the trial ends, if the subscription has/had a trial.
-        /// 
-        /// This may optionally be set on new subscriptions to specify an exact time for the 
-        /// subscription to commence.  The subscription will be active and in "trial" until
-        /// this date.
         /// </summary>
-        public DateTime? TrialPeriodEndsAt
-        {
-            get { return this.trialPeriodEndsAt; }
-            set
-            {
-                if (this.ActivatedAt.HasValue)
-                    throw new InvalidOperationException("Cannot set TrialPeriodEndsAt on existing subscriptions.");
-                if (value.HasValue && (value < DateTime.UtcNow))
-                    throw new ArgumentException("TrialPeriodEndsAt must occur in the future.");
-
-                this.trialPeriodEndsAt = value;
-            }
-        }
-        private DateTime? trialPeriodEndsAt;
+        public DateTime? TrialPeriodEndsAt { get; private set; }
 
         // TODO: Read pending subscription information
 
@@ -76,14 +57,13 @@ namespace Recurly
         public enum RefundType
         {
             Full,
-            Partial,
-            None
+            Partial
         }
 
         /// <summary>
         /// Unit amount per quantity.  Leave null to keep as is. Set to override plan's default amount.
         /// </summary>
-        public int? UnitAmountInCents { get; set; }
+        public int? UnitAmountInCents { get { return TotalAmountInCents.HasValue ? (int?)(TotalAmountInCents.Value / Quantity.Value) : null; } }
 
         private const string UrlPrefix = "/accounts/";
         private const string UrlPostfix = "/subscription";
@@ -163,22 +143,11 @@ namespace Recurly
         /// <param name="refundType"></param>
         public static void RefundSubscription(string accountCode, RefundType refundType)
         {
-            string refundTypeParameter = refundType.ToString().ToLower();
-
             string refundUrl = String.Format("{0}?refund={1}",
                 SubscriptionUrl(accountCode),
-                refundTypeParameter);
+                (refundType == RefundType.Full ? "full" : "partial"));
 
             RecurlyClient.PerformRequest(RecurlyClient.HttpRequestMethod.Delete, refundUrl);
-        }
-
-        /// <summary>
-        /// Terminate the subscription immediately and do not issue a refund.
-        /// </summary>
-        /// <param name="accountCode"></param>
-        public static void TerminateSubscription(string accountCode)
-        {
-            RefundSubscription(accountCode, RefundType.None);
         }
 
         #region Read and Write XML documents
@@ -208,8 +177,12 @@ namespace Recurly
                             this.Quantity = reader.ReadElementContentAsInt();
                             break;
 
-                        case "unit_amount_in_cents":
-                            this.UnitAmountInCents = reader.ReadElementContentAsInt();
+                        //case "unit_amount_in_cents":
+                        //    this.UnitAmountInCents = reader.ReadElementContentAsInt();
+                        //    break;
+
+                        case "total_amount_in_cents":
+                            this.TotalAmountInCents = reader.ReadElementContentAsInt();
                             break;
 
                         case "activated_at":
@@ -244,7 +217,7 @@ namespace Recurly
 
                         case "trial_ends_at":
                             if (DateTime.TryParse(reader.ReadElementContentAsString(), out dateVal))
-                                this.trialPeriodEndsAt = dateVal;
+                                this.TrialPeriodEndsAt = dateVal;
                             break;
 
                         case "pending_subscription":
@@ -261,17 +234,11 @@ namespace Recurly
 
             xmlWriter.WriteElementString("plan_code", this.PlanCode);
 
-            if (!String.IsNullOrEmpty(this.CouponCode))
-                xmlWriter.WriteElementString("coupon_code", this.CouponCode);
-
             if (this.Quantity.HasValue)
                 xmlWriter.WriteElementString("quantity", this.Quantity.Value.ToString());
 
             if (this.UnitAmountInCents.HasValue)
                 xmlWriter.WriteElementString("unit_amount_in_cents", this.UnitAmountInCents.Value.ToString());
-
-            if (this.TrialPeriodEndsAt.HasValue)
-                xmlWriter.WriteElementString("trial_ends_at", this.TrialPeriodEndsAt.Value.ToString("s"));
 
             this.Account.WriteXml(xmlWriter);
 
@@ -308,5 +275,7 @@ namespace Recurly
         }
 
         #endregion
+
+        public int? TotalAmountInCents { get; set; }
     }
 }

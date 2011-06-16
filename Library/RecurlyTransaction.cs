@@ -26,7 +26,7 @@ namespace Recurly
             Refund
         }
 
-        internal RecurlyTransaction()
+        private RecurlyTransaction()
         { }
 
         internal RecurlyTransaction(XmlTextReader reader)

@@ -17,26 +17,12 @@ namespace Recurly
         public string Address1 { get; set; }
         public string Address2 { get; set; }
         public string City { get; set; }
-        /// <summary>
-        /// 2-letter state or province preferred
-        /// </summary>
         public string State { get; set; }
-        /// <summary>
-        /// Zip code or Postal code
-        /// </summary>
         public string PostalCode { get; set; }
-        /// <summary>
-        /// 2-letter ISO country code
-        /// </summary>
         public string Country { get; set; }
         public string IpAddress { get; set; }
         public string PhoneNumber { get; set; }
         public RecurlyCreditCard CreditCard { get; private set; }
-
-        /// <summary>
-        /// VAT Numbers
-        /// </summary>
-        public string VatNumber { get; set; }
 
         private const string UrlPrefix = "/accounts/";
         private const string UrlPostfix = "/billing_info";
@@ -163,10 +149,6 @@ namespace Recurly
                             this.PhoneNumber = reader.ReadElementContentAsString();
                             break;
 
-                        case "vat_number":
-                            this.VatNumber = reader.ReadElementContentAsString();
-                            break;
-
                         case "credit_card":
                             this.CreditCard = new RecurlyCreditCard();
                             this.CreditCard.ReadXml(reader);
@@ -192,11 +174,6 @@ namespace Recurly
 
             if (!String.IsNullOrEmpty(this.IpAddress))
                 xmlWriter.WriteElementString("ip_address", this.IpAddress);
-            else
-                System.Diagnostics.Debug.WriteLine("Recurly Client Library: Recording IP Address is strongly recommended.");
-
-            if (!String.IsNullOrEmpty(this.VatNumber))
-                xmlWriter.WriteElementString("vat_number", this.VatNumber);
 
             if (this.CreditCard != null)
                 this.CreditCard.WriteXml(xmlWriter);
